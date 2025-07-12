@@ -1,0 +1,165 @@
+---
+title: "Theme Provider"
+description: "A comprehensive theme provider with support for light/dark modes and theme variants."
+---
+
+The Theme Provider is a powerful React context provider that manages theme state across your application. It supports light/dark mode switching, theme variants, and automatic system preference detection.
+
+## Features
+
+- **Light/Dark Mode**: Toggle between light, dark, and auto (system preference) modes
+- **Theme Variants**: Support for multiple color schemes (default, slate, purple, blue)
+- **Persistence**: Automatically saves theme preferences to localStorage
+- **System Integration**: Respects user's system color scheme preference
+- **SSR Safe**: Works with server-side rendering
+- **TypeScript**: Full TypeScript support with proper type definitions
+
+The Theme Provider is included in the `@nui/core` package:
+
+```bash
+npm install @nui/core
+```
+
+## Basic Usage
+
+Wrap your application with the `ThemeProvider`:
+
+```tsx
+import { ThemeProvider } from "@nui/core";
+
+function App() {
+  return <ThemeProvider>{/* Your app content */}</ThemeProvider>;
+}
+```
+
+## Configuration
+
+The Theme Provider accepts several configuration options:
+
+```tsx
+<ThemeProvider
+  storageKey="my-app-theme"
+  availableVariants={["default", "slate", "purple", "blue"]}
+  defaultTheme={{ mode: "auto", variant: "default" }}
+  disableStorage={false}
+>
+  <App />
+</ThemeProvider>
+```
+
+### Props
+
+| Prop                | Type                   | Default       | Description                           |
+| ------------------- | ---------------------- | ------------- | ------------------------------------- |
+| `storageKey`        | `string`               | `"theme"`     | Key used for localStorage persistence |
+| `availableVariants` | `string[]`             | Auto-detected | Available theme variants              |
+| `defaultTheme`      | `Partial<ThemeConfig>` | `{}`          | Default theme configuration           |
+| `disableStorage`    | `boolean`              | `false`       | Disable localStorage persistence      |
+
+## Using the Theme Hook
+
+Access theme state and controls using the `useTheme` hook:
+
+```tsx
+import { useTheme } from "@nui/core";
+
+function ThemeControls() {
+  const { config, isDark, availableVariants, setMode, setVariant, toggleMode } =
+    useTheme();
+
+  return (
+    <div>
+      <p>Current mode: {config.mode}</p>
+      <p>Current variant: {config.variant}</p>
+      <p>Is dark: {isDark ? "Yes" : "No"}</p>
+
+      <button onClick={() => setMode("light")}>Light</button>
+      <button onClick={() => setMode("dark")}>Dark</button>
+      <button onClick={() => setMode("auto")}>Auto</button>
+      <button onClick={toggleMode}>Toggle</button>
+
+      {availableVariants.map((variant) => (
+        <button key={variant} onClick={() => setVariant(variant)}>
+          {variant}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+## Theme Toggle Component
+
+Use the built-in `ThemeToggle` component for easy theme switching:
+
+```tsx
+import { ThemeToggle } from "@nui/core";
+
+function Header() {
+  return (
+    <header>
+      <h1>My App</h1>
+      <ThemeToggle mode="combined" />
+    </header>
+  );
+}
+```
+
+## CSS Integration
+
+Import the theme CSS to enable theme variables:
+
+```css
+@import "@nui/core/src/theme.css";
+```
+
+The theme system uses CSS custom properties that automatically update when the theme changes:
+
+```css
+.my-component {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
+}
+```
+
+## Available Theme Variants
+
+The theme system includes several built-in variants:
+
+- **Default**: The standard theme with neutral colors
+- **Slate**: A cooler theme with blue-gray tones
+- **Purple**: A vibrant theme with purple accents
+- **Blue**: A professional theme with blue accents
+
+Each variant automatically adapts to both light and dark modes.
+
+## Demo
+
+<ThemeDemo />
+
+## API Reference
+
+### ThemeConfig
+
+```typescript
+interface ThemeConfig {
+  mode: "light" | "dark" | "auto";
+  variant: string;
+}
+```
+
+### ThemeContextValue
+
+```typescript
+interface ThemeContextValue {
+  config: ThemeConfig;
+  isDark: boolean;
+  availableVariants: string[];
+  setConfig: (config: ThemeConfig) => void;
+  setMode: (mode: "light" | "dark" | "auto") => void;
+  toggleMode: () => void;
+  setVariant: (variant: string) => void;
+  cycleVariant: (available: string[]) => void;
+}
+```

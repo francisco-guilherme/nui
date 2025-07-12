@@ -1,0 +1,46 @@
+---
+title: "Sheet"
+description: "A sliding panel for displaying content."
+links:
+  - label: "Docs"
+    href: "https://base-ui.com/react/components/dialog"
+---
+
+<Preview name="sheet-demo" />
+
+## Usage
+
+```tsx title="Imports"
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+```
+
+```tsx title="Anatomy"
+<Sheet>
+  <SheetTrigger />
+  <SheetContent>
+    <SheetClose />
+    <SheetHeader>
+      <SheetTitle />
+      <SheetDescription />
+    </SheetHeader>
+    <SheetFooter>
+      <SheetClose />
+    </SheetFooter>
+  </SheetContent>
+</Sheet>
+```
+
+## Examples
+
+### Sides
+
+<Preview name="sheet-sides" />

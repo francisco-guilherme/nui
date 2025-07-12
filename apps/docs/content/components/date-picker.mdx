@@ -1,0 +1,30 @@
+---
+title: "Date Picker"
+description: "A date picker component."
+---
+
+<Preview name="date-picker-demo" />
+
+The date picker component is a composition of the `Calendar` and `Popover` components.
+
+Follow installation instructions for the [`Calendar`](/docs/components/calendar) and [`Popover`](/docs/components/popover) components.
+
+## Usage
+
+```tsx title="Imports"
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+```
+
+```tsx title="Anatomy"
+<Popover>
+  <PopoverTrigger />
+  <PopoverContent>
+    <Calendar />
+  </PopoverContent>
+</Popover>
+```

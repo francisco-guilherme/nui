@@ -1,0 +1,25 @@
+{
+  "name": "nui",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun --filter '*' dev",
+    "build": "bun --filter '*' build",
+    "check": "ultracite format",
+    "typecheck": "tsc --noEmit",
+    "clean": "./scripts/clean.sh"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.1.1",
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.8.3",
+    "ultracite": "5.0.36"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "bun@1.2.17"
+}

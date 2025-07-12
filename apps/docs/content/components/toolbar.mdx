@@ -1,0 +1,41 @@
+---
+title: "Toolbar"
+description: "Displays a toolbar for user interaction."
+links:
+  - label: "Docs"
+    href: "https://base-ui.com/react/components/toolbar"
+---
+
+<Preview name="toolbar-demo" />
+
+## Usage
+
+```tsx title="Imports"
+import {
+  Toolbar,
+  ToolbarButton,
+  ToolbarGroup,
+  ToolbarInput,
+  ToolbarLink,
+  ToolbarSeparator,
+} from "@/components/ui/toolbar";
+```
+
+```tsx title="Anatomy"
+<Toolbar>
+  <ToolbarButton />
+  <ToolbarLink />
+  <ToolbarSeparator />
+  <ToolbarGroup>
+    <ToolbarButton />
+    <ToolbarButton />
+  </ToolbarGroup>
+  <ToolbarInput />
+</Toolbar>
+```
+
+## Examples
+
+### File Explorer
+
+<Preview name="toolbar-file-explorer" />
