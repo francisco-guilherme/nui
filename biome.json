@@ -13,6 +13,12 @@
       },
       "style": {
         "useFilenamingConvention": "off"
+      },
+      "suspicious": {
+        "noConsole": "off"
+      },
+      "performance": {
+        "useTopLevelRegex": "off"
       }
     }
   }

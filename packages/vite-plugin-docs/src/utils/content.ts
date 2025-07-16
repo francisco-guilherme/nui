@@ -3,61 +3,50 @@ import { relative } from "node:path";
 import fg from "fast-glob";
 import matter from "gray-matter";
 import { normalizePath } from "vite";
-
-import type { ContentMetadata } from "../types/metadata";
+import type { Content } from "../types/content";
 
 const EXT_REGEX = /\.(mdx|tsx)$/;
-const INDEX_REGEX = /\/index$/;
-const TRAILING_SLASH_REGEX = /\/$/;
 
 /**
- * Converts a file path like "docs/getting-started.mdx" to "/docs/getting-started"
- * Special cases: "index.mdx" becomes "/" and trailing slashes are removed
+ * Normalize a file path to a clean route path.
+ * - Removes file extensions
+ * - Converts `index` routes to root
+ * - Strips trailing slashes
  */
-const createRoutePath = (relativePath: string): string => {
-  const route = `/${relativePath.replace(EXT_REGEX, "").replace(INDEX_REGEX, "")}`;
-  return route === "/" ? "/" : route.replace(TRAILING_SLASH_REGEX, "");
+const toRoutePath = (relativePath: string): string => {
+  let path = `/${relativePath.replace(EXT_REGEX, "")}`;
+  path = path.replace(/\/index$/, "").replace(/\/$/, "");
+  return path || "/";
 };
 
 /**
- * Processes a single file to extract metadata and create content object
+ * Parse a content file and return metadata.
  */
-const processFiles = (
-  filePath: string,
-  baseDirectory: string
-): ContentMetadata => {
-  // Read the file content
-  const fileContent = fs.readFileSync(filePath, "utf-8");
-
-  // Extract frontmatter using gray-matter
-  const { data: frontmatter } = matter(fileContent);
-
-  // Get relative path from base directory
-  const relativePath = normalizePath(relative(baseDirectory, filePath));
+const parseContentFile = (filePath: string, baseDir: string): Content => {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const { data: frontmatter } = matter(raw);
+  const relPath = normalizePath(relative(baseDir, filePath));
 
   return {
-    name: relativePath.replace(".mdx", ""),
-    path: createRoutePath(relativePath),
+    name: relPath.replace(EXT_REGEX, ""),
+    path: toRoutePath(relPath),
     file: filePath,
     frontmatter,
   };
 };
 
 /**
- * Scans a directory for content files and extracts their metadata
+ * Scan directory recursively for .mdx/.tsx files and return parsed content metadata.
  */
-export const scanContents = async (
-  contentsDir: string
-): Promise<ContentMetadata[]> => {
+export const scanContents = async (baseDir: string): Promise<Content[]> => {
   const files = await fg("**/*.{mdx,tsx}", {
-    cwd: contentsDir,
+    cwd: baseDir,
     absolute: true,
   });
 
   if (files.length === 0) {
-    // biome-ignore lint: debug logging
-    console.warn(`No files found in ${contentsDir}`);
+    console.warn(`[scanContents] No content files found in: ${baseDir}`);
   }
 
-  return files.map((file) => processFiles(file, contentsDir));
+  return files.map((file) => parseContentFile(file, baseDir));
 };

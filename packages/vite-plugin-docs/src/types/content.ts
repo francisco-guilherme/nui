@@ -1,4 +1,4 @@
-export interface ContentMetadata {
+export interface Content {
   name: string;
   path: string;
   file: string;

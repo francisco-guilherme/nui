@@ -1,65 +1,64 @@
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import mdx from "@mdx-js/rollup";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import type { ModuleNode, Plugin } from "vite";
 
-import type { ContentMetadata } from "./types/metadata";
+import type { Content } from "./types/content";
 import { scanContents } from "./utils/content";
 import { generateContentsModule } from "./utils/modules";
 
-/**
- * Virtual module mappings for docs plugin
- * Maps virtual import paths to their resolved identifiers
- */
-const VIRTUAL_MODULES = new Map([
-  ["virtual:docs-contents", "\0virtual:docs-contents"],
-  ["virtual:docs-demos", "\0virtual:docs-demos"],
-]);
+const VIRTUAL_MODULE_ID = "virtual:docs-contents";
+const RESOLVED_VIRTUAL_ID = `\0${VIRTUAL_MODULE_ID}`;
 
-/**
- * Configuration options for the docs plugin
- */
 interface DocsPluginOptions {
-  /** Directory containing content files (default: "content") */
   contentsDir?: string;
-  /** Enable verbose logging (default: false) */
   verbose?: boolean;
 }
 
-/**
- * Vite plugin for processing documentation files and demos
- * Provides virtual modules for accessing scanned content metadata
- */
 export default function docsPlugin(options: DocsPluginOptions = {}): Plugin[] {
   const { contentsDir = "content", verbose = true } = options;
+  let allContentData: Record<string, Content[]> = {};
 
-  let componentsData: ContentMetadata[] = [];
-  let docsData: ContentMetadata[] = [];
-
-  /**
-   * Loads and scans content and demo files from configured directories
-   */
-  const loadData = async (root: string) => {
-    try {
-      const baseDir = resolve(root, contentsDir);
-
-      // Load local content
-      [componentsData, docsData] = await Promise.all([
-        scanContents(resolve(baseDir, "components")),
-        scanContents(resolve(baseDir, "docs")),
-      ]);
-
-      if (verbose) {
-        // biome-ignore lint: debug logging
-        console.log(
-          `Scanned docs: ${componentsData.length}, demos: ${docsData.length}`
-        );
-      }
-    } catch (_error) {
-      componentsData = [];
-      docsData = [];
+  const log = (msg: string) => {
+    if (verbose) {
+      console.log(`[docsPlugin] ${msg}`);
     }
+  };
+
+  const getSubdirectories = async (baseDir: string): Promise<string[]> => {
+    try {
+      const entries = await readdir(baseDir, { withFileTypes: true });
+      return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    } catch (err) {
+      log(`Failed to read ${baseDir}: ${err}`);
+      return [];
+    }
+  };
+
+  const loadContents = async (root: string) => {
+    const baseDir = resolve(root, contentsDir);
+    const subdirs = await getSubdirectories(baseDir);
+
+    if (subdirs.length === 0) {
+      log(`No subdirectories found in "${baseDir}".`);
+      return;
+    }
+
+    const results = await Promise.all(
+      subdirs.map(async (dir) => ({
+        dir,
+        contents: await scanContents(resolve(baseDir, dir)),
+      }))
+    );
+
+    allContentData = Object.fromEntries(
+      results.map(({ dir, contents }) => [dir, contents])
+    );
+
+    const total = results.reduce((sum, r) => sum + r.contents.length, 0);
+    log(`Scanned ${total} files in ${subdirs.length} subdirs.`);
   };
 
   return [
@@ -74,19 +73,16 @@ export default function docsPlugin(options: DocsPluginOptions = {}): Plugin[] {
       name: "vite-plugin-docs",
 
       async configResolved(config) {
-        await loadData(config.root);
+        await loadContents(config.root);
       },
 
       resolveId(id) {
-        return VIRTUAL_MODULES.get(id) ?? null;
+        return id === VIRTUAL_MODULE_ID ? RESOLVED_VIRTUAL_ID : null;
       },
 
       load(id) {
-        if (id === "virtual:docs-contents") {
-          return generateContentsModule(componentsData);
-        }
-        if (id === "virtual:docs-demos") {
-          return generateContentsModule(docsData);
+        if (id === RESOLVED_VIRTUAL_ID) {
+          return generateContentsModule(allContentData);
         }
         return null;
       },
@@ -96,9 +92,9 @@ export default function docsPlugin(options: DocsPluginOptions = {}): Plugin[] {
           return;
         }
 
-        await loadData(server.config.root);
+        await loadContents(server.config.root);
 
-        return Array.from(VIRTUAL_MODULES.values())
+        return [RESOLVED_VIRTUAL_ID]
           .map((id) => server.moduleGraph.getModuleById(id))
           .filter((mod): mod is ModuleNode => Boolean(mod));
       },
