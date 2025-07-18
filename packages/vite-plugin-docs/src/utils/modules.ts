@@ -1,40 +1,61 @@
-import type { Content } from "../types/content";
+import type { Content, Contents, NavItem } from "../types/content";
+
+const titleTransform = (name: string): string =>
+  name.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
 /**
- * Creates an import statement for a file.
+ * Convert content to a navigation item
  */
-const createImport = (id: number, file: string) =>
-  `import Page${id} from ${JSON.stringify(file)};`;
+const createNavItem = (content: Content): NavItem => {
+  const { title, description } = content.frontmatter;
+
+  return {
+    title:
+      typeof title === "string" && title.trim()
+        ? title.trim()
+        : titleTransform(content.name),
+
+    description:
+      typeof description === "string" && description.trim()
+        ? description.trim()
+        : undefined,
+
+    href: content.path,
+  };
+};
 
 /**
- * Creates a unified contents module with all directories
+ * Recursively build the navigation structure from contents
  */
-export const generateContentsModule = (
-  allContentData: Record<string, Content[]>
-): string => {
-  const allContents = Object.values(allContentData).flat();
+const buildNavigation = (node: Contents): NavItem[] => {
+  const items: NavItem[] = [];
 
-  if (allContents.length === 0) {
-    return `import React from "react";
-export const contents = [];`;
+  // Convert current directory contents
+  const contentItems = node.contents.map(createNavItem);
+  items.push(...contentItems);
+
+  // Recursively process subdirectories
+  for (const [name, subnode] of Object.entries(node.subdirectories)) {
+    const children = buildNavigation(subnode);
+
+    if (children.length > 0) {
+      items.push({
+        title: titleTransform(name),
+        href: subnode.path || `/${name}`,
+        children,
+      });
+    }
   }
 
-  const imports = allContents.map((c, i) => createImport(i, c.file)).join("\n");
+  return items;
+};
 
-  const contentExports = allContents
-    .map((c, i) => {
-      const path = JSON.stringify(c.path);
-      const meta = JSON.stringify(c.frontmatter || {});
-      return `  { path: ${path}, element: Page${i}, meta: ${meta} }`;
-    })
-    .join(",\n");
+/**
+ * Generate a TypeScript module exporting the contents and navigation
+ */
+export const generateContentsModule = (contents: Contents | null): string => {
+  const navigation = contents ? buildNavigation(contents) : [];
 
-  return `import React from "react";
-
-${imports}
-
-export const contents = [
-${contentExports}
-];
-`;
+  return `export const contents = ${JSON.stringify(contents, null, 2)};
+export const navigation = ${JSON.stringify(navigation, null, 2)};`;
 };

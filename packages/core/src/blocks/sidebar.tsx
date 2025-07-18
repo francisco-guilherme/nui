@@ -2,6 +2,7 @@ export interface SidebarItem {
   title: string;
   href: string;
   active?: boolean;
+  description?: string;
   children?: SidebarItem[];
 }
 

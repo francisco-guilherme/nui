@@ -2,11 +2,13 @@ export interface HeaderProps {
   title?: string;
   description?: string;
   logo?: React.ReactNode;
-  navigation?: Array<{
-    title: string;
-    href: string;
-    active?: boolean;
-  }>;
+  navigation?:
+    | Array<{
+        title: string;
+        href: string;
+        active?: boolean;
+      }>
+    | React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
 }
@@ -31,21 +33,26 @@ export const Header = ({
             </div>
           </div>
 
-          {navigation.length > 0 && (
-            <nav className="hidden space-x-6 md:flex">
-              {navigation.map((item) => (
-                <a
-                  className={`font-medium text-sm ${
-                    item.active ? "text-blue-600" : "hover:text-blue-600"
-                  }`}
-                  href={item.href}
-                  key={item.href}
-                >
-                  {item.title}
-                </a>
-              ))}
-            </nav>
-          )}
+          {navigation &&
+            (Array.isArray(navigation) ? (
+              navigation.length > 0 && (
+                <nav className="hidden space-x-6 md:flex">
+                  {navigation.map((item) => (
+                    <a
+                      className={`font-medium text-sm ${
+                        item.active ? "text-blue-600" : "hover:text-blue-600"
+                      }`}
+                      href={item.href}
+                      key={item.href}
+                    >
+                      {item.title}
+                    </a>
+                  ))}
+                </nav>
+              )
+            ) : (
+              <div className="hidden md:flex">{navigation}</div>
+            ))}
 
           {actions && (
             <div className="flex items-center space-x-2">{actions}</div>

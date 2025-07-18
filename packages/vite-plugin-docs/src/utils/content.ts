@@ -1,52 +1,94 @@
-import fs from "node:fs";
-import { relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { readdir } from "node:fs/promises";
+import { relative, resolve } from "node:path";
 import fg from "fast-glob";
 import matter from "gray-matter";
 import { normalizePath } from "vite";
-import type { Content } from "../types/content";
+
+import type { Content, Contents } from "../types/content";
 
 const EXT_REGEX = /\.(mdx|tsx)$/;
 
-/**
- * Normalize a file path to a clean route path.
- * - Removes file extensions
- * - Converts `index` routes to root
- * - Strips trailing slashes
- */
-const toRoutePath = (relativePath: string): string => {
-  let path = `/${relativePath.replace(EXT_REGEX, "")}`;
-  path = path.replace(/\/index$/, "").replace(/\/$/, "");
-  return path || "/";
-};
+/** Convert relative path to route-safe path */
+const toRoutePath = (relPath: string): string =>
+  `/${relPath.replace(EXT_REGEX, "")}`.replace(/\/index$/, "") || "/";
 
-/**
- * Parse a content file and return metadata.
- */
-const parseContentFile = (filePath: string, baseDir: string): Content => {
-  const raw = fs.readFileSync(filePath, "utf-8");
-  const { data: frontmatter } = matter(raw);
-  const relPath = normalizePath(relative(baseDir, filePath));
+/** Parse frontmatter from file */
+const parseFile = (file: string, baseDir: string, rootDir: string): Content => {
+  const raw = readFileSync(file, "utf-8");
+  const { data } = matter(raw);
+  
+  const relName = normalizePath(relative(baseDir, file)).replace(EXT_REGEX, "");
+  const relPath = normalizePath(relative(rootDir, file));
 
   return {
-    name: relPath.replace(EXT_REGEX, ""),
+    name: relName,
     path: toRoutePath(relPath),
-    file: filePath,
-    frontmatter,
+    file,
+    frontmatter: data,
   };
 };
 
-/**
- * Scan directory recursively for .mdx/.tsx files and return parsed content metadata.
- */
-export const scanContents = async (baseDir: string): Promise<Content[]> => {
-  const files = await fg("**/*.{mdx,tsx}", {
-    cwd: baseDir,
-    absolute: true,
-  });
+/** Get .mdx/.tsx files in a directory */
+const scanContents = async (
+  dir: string,
+  rootDir: string
+): Promise<Content[]> => {
+  const files = await fg("*.{mdx,tsx}", { cwd: dir, absolute: true });
+  return files.map((file) => parseFile(file, dir, rootDir));
+};
 
-  if (files.length === 0) {
-    console.warn(`[scanContents] No content files found in: ${baseDir}`);
+/** List subdirectories */
+const getSubdirectories = async (dir: string): Promise<string[]> => {
+  try {
+    return (await readdir(dir, { withFileTypes: true }))
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+  } catch (err) {
+    console.warn(`⚠️ Failed to read "${dir}"`, err);
+    return [];
   }
+};
 
-  return files.map((file) => parseContentFile(file, baseDir));
+/** Recursively build content tree */
+const buildContentTree = async (
+  dir: string,
+  rootDir: string,
+  relPath = ""
+): Promise<Contents> => {
+  const [files, dirs] = await Promise.all([
+    scanContents(dir, rootDir),
+    getSubdirectories(dir),
+  ]);
+
+  const subdirectories = Object.fromEntries(
+    await Promise.all(
+      dirs.map(async (d) => {
+        const full = resolve(dir, d);
+        const sub = relPath ? `${relPath}/${d}` : d;
+        return [d, await buildContentTree(full, rootDir, sub)];
+      })
+    )
+  );
+
+  return {
+    name: relPath.split("/").pop() || "root",
+    path: relPath,
+    contents: files,
+    subdirectories,
+  };
+};
+
+/** Load content structure from disk */
+export const loadContents = async (
+  root: string,
+  dir: string
+): Promise<Contents | null> => {
+  try {
+    const full = resolve(root, dir);
+    return await buildContentTree(full, full);
+  } catch (err) {
+    console.error("❌ loadContents failed:", err);
+    return null;
+  }
 };

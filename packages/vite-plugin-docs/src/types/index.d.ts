@@ -1,10 +1,7 @@
-interface Content {
-  name: string;
-  path: string;
-  file: string;
-  frontmatter: Record<string, unknown>;
-}
+import type { DocNavItem } from "../utils/modules";
+import type { Contents } from "./content";
 
 declare module "virtual:docs-contents" {
-  export const contents: Record<string, Content[]>;
+  export const contents: Contents | null;
+  export const navigation: DocNavItem[];
 }
